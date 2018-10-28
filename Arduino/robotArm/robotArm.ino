@@ -9,7 +9,7 @@
 #include <Stepper.h>
 
 
-Stepper stepper(2400, STEPPER_GRIPPER_PIN_0, STEPPER_GRIPPER_PIN_1, STEPPER_GRIPPER_PIN_2, STEPPER_GRIPPER_PIN_3);
+Stepper stepper(2400, STEPPER_GRIPPER_PIN_0, STEPPER_GRIPPER_PIN_2, STEPPER_GRIPPER_PIN_1, STEPPER_GRIPPER_PIN_3);
 RampsStepper stepperRotate(Z_STEP_PIN, Z_DIR_PIN, Z_ENABLE_PIN);
 RampsStepper stepperLower(Y_STEP_PIN, Y_DIR_PIN, Y_ENABLE_PIN);
 RampsStepper stepperHigher(X_STEP_PIN, X_DIR_PIN, X_ENABLE_PIN);
@@ -49,6 +49,10 @@ void setup() {
   digitalWrite(STEPPER_GRIPPER_PIN_2, LOW);
   digitalWrite(STEPPER_GRIPPER_PIN_3, LOW);
 
+  pinMode(ROTATE_ENDSTOP_PIN, INPUT_PULLUP);
+  pinMode(LOWER_ENDSTOP_PIN, INPUT_PULLUP);
+  pinMode(HIGHER_ENDSTOP_PIN, INPUT_PULLUP);
+
   
   //reduction of steppers..
   stepperHigher.setReductionRatio(32.0 / 9.0, 200 * 16);  //big gear: 32, small gear: 9, steps per rev: 200, microsteps: 16
@@ -57,16 +61,29 @@ void setup() {
   stepperExtruder.setReductionRatio(32.0 / 9.0, 200 * 16);
   
   //start positions..
-  stepperHigher.setPositionRad(PI / 2.0);  //90°
-  stepperLower.setPositionRad(0);          // 0°
-  stepperRotate.setPositionRad(0);         // 0°
-  stepperExtruder.setPositionRad(0);
-  
+  //stepperHigher.setPositionRad(PI / 2.0);  //90°
+  //stepperLower.setPositionRad(0);          // 0°
+  //stepperRotate.setPositionRad(0);         // 0°
+  //stepperExtruder.setPositionRad(0);
+
   //enable and init..
   setStepperEnable(false);
-  interpolator.setInterpolation(0,120,120,0, 0,120,120,0);
+
+  delay(50);
+  
+  calibration();
+  
+  //interpolator.setInterpolation(-18,4,140,0, -18,4,140,0);
+  interpolator.setInterpolation(-41,11,141,0, -41,11,141,0);
+  interpolator.updateActualPosition();
+  geometry.set(interpolator.getXPosmm(), interpolator.getYPosmm(), interpolator.getZPosmm());
+  stepperRotate.setPositionRad(geometry.getRotRad());
+  stepperLower.setPositionRad(geometry.getLowRad());
+  stepperHigher.setPositionRad(geometry.getHighRad());
+  stepperExtruder.setPositionRad(interpolator.getEPosmm());
   
   Serial.println("start");
+  
 }
 
 void setStepperEnable(bool enable) {
@@ -205,4 +222,42 @@ void executeCommand(Cmd cmd) {
   }
 }
 
+void calibration(){
+  float step = 0.0003;
+  float i;
+
+  for(i = 0;; i -= step)
+  {
+    if((digitalRead(LOWER_ENDSTOP_PIN) != HIGH) && (digitalRead(HIGHER_ENDSTOP_PIN) != HIGH)){
+      stepperLower.stepToPositionRad(i);
+      stepperLower.update();
+      stepperHigher.stepToPositionRad(i);
+      stepperHigher.update();
+      delay(1);
+    }
+    else if((digitalRead(LOWER_ENDSTOP_PIN) != HIGH) && (digitalRead(HIGHER_ENDSTOP_PIN) == HIGH)){
+      stepperLower.stepToPositionRad(i);
+      stepperLower.update();
+      delay(1);
+    }
+    else if((digitalRead(LOWER_ENDSTOP_PIN) == HIGH) && (digitalRead(HIGHER_ENDSTOP_PIN) != HIGH)){
+      stepperHigher.stepToPositionRad(i);
+      stepperHigher.update();
+      delay(1);
+    }
+    else{
+      break;
+    }
+ }
+
+ for(i = 0;; i -= step)
+  {
+    if(digitalRead(ROTATE_ENDSTOP_PIN) == HIGH){
+      break;
+    }
+    stepperRotate.stepToPositionRad(i);
+    stepperRotate.update();
+    delay(1);
+  }
+}
 

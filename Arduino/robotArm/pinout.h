@@ -27,13 +27,13 @@
 #define Z_MIN_PIN          18
 #define Z_MAX_PIN          19
 
-#define E_STEP_PIN         26
-#define E_DIR_PIN          28
-#define E_ENABLE_PIN       24
+#define E_STEP_PIN         31
+#define E_DIR_PIN          33
+#define E_ENABLE_PIN       35
 
-#define Q_STEP_PIN         36
-#define Q_DIR_PIN          34
-#define Q_ENABLE_PIN       30
+#define Q_STEP_PIN         37
+#define Q_DIR_PIN          39
+#define Q_ENABLE_PIN       41
 
 #define SDPOWER            -1
 #define SDSS               53
@@ -50,10 +50,14 @@
 #define TEMP_1_PIN         14   // ANALOG NUMBERING
 
 //RAMPS AUX-1
-#define STEPPER_GRIPPER_PIN_0 40
-#define STEPPER_GRIPPER_PIN_1 59
-#define STEPPER_GRIPPER_PIN_2 63
-#define STEPPER_GRIPPER_PIN_3 64
+#define STEPPER_GRIPPER_PIN_0 28
+#define STEPPER_GRIPPER_PIN_1 30
+#define STEPPER_GRIPPER_PIN_2 32
+#define STEPPER_GRIPPER_PIN_3 34
+
+#define ROTATE_ENDSTOP_PIN 38
+#define LOWER_ENDSTOP_PIN  40
+#define HIGHER_ENDSTOP_PIN 42
 
 
 
