@@ -28,7 +28,7 @@ void setup() {
   
   pinMode(TEST_PIN,INPUT_PULLUP);
   
-  pinMode(ROTATE_ENDSTOP_PIN, INPUT_PULLUP);
+  // pinMode(ROTATE_ENDSTOP_PIN, INPUT_PULLUP);
   pinMode(LOWER_ENDSTOP_PIN, INPUT_PULLUP);
   pinMode(HIGHER_ENDSTOP_PIN, INPUT_PULLUP);
 
@@ -298,6 +298,7 @@ void executeCommand(Cmd cmd) {
       case 18: cmdStepperOff(); break;
       case 105: Serial.println("Test echo "); break;
       case 106: testGCode(); break;
+      case 100: calibration(); break;
       //case 106: cmdFanOn(); break;
       //case 107: cmdFanOff(); break;
       case 114: cmdGetPos();break;
@@ -337,15 +338,15 @@ void calibration(){
     }
  }
 
- for(i = 0;; i -= step)
-  {
-    if(digitalRead(ROTATE_ENDSTOP_PIN) == HIGH){
-      break;
-    }
-    stepperRotate.stepToPositionRad(i);
-    stepperRotate.update();
-    delay(1);
-  }
+//  for(i = 0;; i -= step)
+//   {
+//     if(digitalRead(ROTATE_ENDSTOP_PIN) == HIGH){
+//       break;
+//     }
+//     stepperRotate.stepToPositionRad(i);
+//     stepperRotate.update();
+//     delay(1);
+//   }
 }
 
 
