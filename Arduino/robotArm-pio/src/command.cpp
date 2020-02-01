@@ -47,11 +47,9 @@ bool Command::processMessage(String& msg) {
     printErr();
     return false; 
   }
+  Serial.println("echo CMD:"+msg);
   String s = msg.substring(first, last);
   command.num = s.toInt();
-  Serial.print("echo CMD:");
-  Serial.println(command.num);
-
 
   //parse up to 5 Values
   command.valueX = NAN; 

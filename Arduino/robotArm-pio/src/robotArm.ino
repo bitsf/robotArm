@@ -9,12 +9,9 @@
 #include <Stepper.h>
 
 
-Stepper stepper(2400, STEPPER_GRIPPER_PIN_0, STEPPER_GRIPPER_PIN_2, STEPPER_GRIPPER_PIN_1, STEPPER_GRIPPER_PIN_3);
 RampsStepper stepperRotate(Z_STEP_PIN, Z_DIR_PIN, Z_ENABLE_PIN);
 RampsStepper stepperLower(Y_STEP_PIN, Y_DIR_PIN, Y_ENABLE_PIN);
 RampsStepper stepperHigher(X_STEP_PIN, X_DIR_PIN, X_ENABLE_PIN);
-RampsStepper stepperExtruder(E_STEP_PIN, E_DIR_PIN, E_ENABLE_PIN);
-FanControl fan(FAN_PIN);
 RobotGeometry geometry;
 Interpolation interpolator;
 Queue<Cmd> queue(15);
@@ -27,32 +24,10 @@ void setup() {
   Serial.begin(115200);
   
   //various pins..
-  pinMode(HEATER_0_PIN  , OUTPUT);
-  pinMode(HEATER_1_PIN  , OUTPUT);
   pinMode(LED_PIN       , OUTPUT);
   
-  //unused Stepper..
-  pinMode(E_STEP_PIN   , OUTPUT);
-  pinMode(E_DIR_PIN    , OUTPUT);
-  pinMode(E_ENABLE_PIN , OUTPUT);
+  pinMode(TEST_PIN,INPUT_PULLUP);
   
-  //unused Stepper..
-  pinMode(Q_STEP_PIN   , OUTPUT);
-  pinMode(Q_DIR_PIN    , OUTPUT);
-  pinMode(Q_ENABLE_PIN , OUTPUT);
-
-  pinMode(X_MIN_PIN,INPUT);
-  
-  //GripperPins
-  pinMode(STEPPER_GRIPPER_PIN_0, OUTPUT);
-  pinMode(STEPPER_GRIPPER_PIN_1, OUTPUT);
-  pinMode(STEPPER_GRIPPER_PIN_2, OUTPUT);
-  pinMode(STEPPER_GRIPPER_PIN_3, OUTPUT);
-  digitalWrite(STEPPER_GRIPPER_PIN_0, LOW);
-  digitalWrite(STEPPER_GRIPPER_PIN_1, LOW);
-  digitalWrite(STEPPER_GRIPPER_PIN_2, LOW);
-  digitalWrite(STEPPER_GRIPPER_PIN_3, LOW);
-
   pinMode(ROTATE_ENDSTOP_PIN, INPUT_PULLUP);
   pinMode(LOWER_ENDSTOP_PIN, INPUT_PULLUP);
   pinMode(HIGHER_ENDSTOP_PIN, INPUT_PULLUP);
@@ -62,8 +37,7 @@ void setup() {
   stepperHigher.setReductionRatio(32.0 / 9.0, 200 * 16);  //big gear: 32, small gear: 9, steps per rev: 200, microsteps: 16
   stepperLower.setReductionRatio( 32.0 / 9.0, 200 * 16);
   stepperRotate.setReductionRatio(32.0 / 9.0, 200 * 16);
-  stepperExtruder.setReductionRatio(32.0 / 9.0, 200 * 16);
-  
+ 
   //start positions..
   //stepperHigher.setPositionRad(PI / 2.0);  //90°
   //stepperLower.setPositionRad(0);          // 0°
@@ -75,7 +49,7 @@ void setup() {
 
   delay(50);
   
-  calibration();
+  // calibration();
   
   //interpolator.setInterpolation(-18,4,140,0, -18,4,140,0);
   interpolator.setInterpolation(-41,11,141,0, -41,11,141,0);
@@ -84,7 +58,6 @@ void setup() {
   stepperRotate.setPositionRad(geometry.getRotRad());
   stepperLower.setPositionRad(geometry.getLowRad());
   stepperHigher.setPositionRad(geometry.getHighRad());
-  stepperExtruder.setPositionRad(interpolator.getEPosmm());
   
   Serial.println("start");
   
@@ -99,22 +72,16 @@ void setStepperEnable(bool enable) {
   stepperRotate.enable(enable);
   stepperLower.enable(enable);
   stepperHigher.enable(enable); 
-  stepperExtruder.enable(enable); 
-  fan.enable(enable);
 }
 
 void actionButton(){
-  button = digitalRead(X_MIN_PIN);
+  button = digitalRead(TEST_PIN);
   if(button == LOW && button_released == 0){
     button_released=1;
     
    Serial.println("echo Action Button pressed");
     if(queue.isEmpty()){
-      String gcode[]={"M17","G28","G1 Z120 Y120","G1 X5 Z-90 Y100","G4 T1","G1 Z-145 Y95","G1 Y132","M40","M18"};
-      for (int a=0; a <9; a++){
-      command.insertGcode(gcode[a]);
-      queue.push(command.getCmd());
-      }
+      testGCode();
     }else{
       Serial.println("echo clear command queue");
       queue.clear();
@@ -127,6 +94,14 @@ void actionButton(){
   }
 }
 
+void testGCode(){
+  String gcode[]={"M17","G28","G1 Z120 Y120","G1 X5 Z-90 Y100","G4 T1","G1 Z-145 Y95","G1 Y132","M40","M18"};
+  for (int a=0; a <9; a++){
+      command.insertGcode(gcode[a]);
+      queue.push(command.getCmd());
+  }
+}
+
 void loop () {
   actionButton();
 
@@ -136,11 +111,9 @@ void loop () {
   stepperRotate.stepToPositionRad(geometry.getRotRad());
   stepperLower.stepToPositionRad (geometry.getLowRad());
   stepperHigher.stepToPositionRad(geometry.getHighRad());
-  stepperExtruder.stepToPositionRad(interpolator.getEPosmm());
   stepperRotate.update();
   stepperLower.update();
   stepperHigher.update(); 
-  fan.update();
   
   if (!queue.isFull()) {
     if (command.handleGcode()) {
@@ -192,39 +165,12 @@ void cmdMove(Cmd (&cmd)) {
 void cmdDwell(Cmd (&cmd)) {
   delay(int(cmd.valueT * 1000));
 }
-void cmdGripperOn(Cmd (&cmd)) {
-  stepper.setSpeed(5);
-  stepper.step(int(cmd.valueT));
-  delay(50);
-  digitalWrite(STEPPER_GRIPPER_PIN_0, LOW);
-  digitalWrite(STEPPER_GRIPPER_PIN_1, LOW);
-  digitalWrite(STEPPER_GRIPPER_PIN_2, LOW);
-  digitalWrite(STEPPER_GRIPPER_PIN_3, LOW);
-  //printComment("// NOT IMPLEMENTED");
-  //printFault();
-}
-void cmdGripperOff(Cmd (&cmd)) {
-  stepper.setSpeed(5);
-  stepper.step(-int(cmd.valueT));
-  delay(50);
-  digitalWrite(STEPPER_GRIPPER_PIN_0, LOW);
-  digitalWrite(STEPPER_GRIPPER_PIN_1, LOW);
-  digitalWrite(STEPPER_GRIPPER_PIN_2, LOW);
-  digitalWrite(STEPPER_GRIPPER_PIN_3, LOW);
-  //printComment("// NOT IMPLEMENTED");
-  //printFault();
-}
+
 void cmdStepperOn() {
   setStepperEnable(true);
 }
 void cmdStepperOff() {
   setStepperEnable(false);
-}
-void cmdFanOn() {
-  fan.enable(true);
-}
-void cmdFanOff() {
-  fan.enable(false);
 }
 
 void cmdGetPos() {
@@ -264,7 +210,7 @@ void cmdHome(Cmd (&cmd)){
   cmd.valueX=0;
   cmd.valueY=120;
   cmd.valueZ=160;
-  cmdMove(cmd) ;
+  cmdMove(cmd);
 }
 
 
@@ -346,13 +292,14 @@ void executeCommand(Cmd cmd) {
   } else if (cmd.id == 'M') {
     switch (cmd.num) {
       //case 0: cmdEmergencyStop(); break;
-      case 3: cmdGripperOn(cmd); break;
-      case 5: cmdGripperOff(cmd); break;
+      //case 3: cmdGripperOn(cmd); break;
+      //case 5: cmdGripperOff(cmd); break;
       case 17: cmdStepperOn(); break;
       case 18: cmdStepperOff(); break;
-      case 105: Serial.print("T:0 B:0 "); break;
-      case 106: cmdFanOn(); break;
-      case 107: cmdFanOff(); break;
+      case 105: Serial.println("Test echo "); break;
+      case 106: testGCode(); break;
+      //case 106: cmdFanOn(); break;
+      //case 107: cmdFanOff(); break;
       case 114: cmdGetPos();break;
       case 40: cmdOpen(cmd);break;
       default: handleAsErr(cmd); 
