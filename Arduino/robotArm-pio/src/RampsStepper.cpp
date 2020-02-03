@@ -33,6 +33,10 @@ int RampsStepper::getPosition() const {
   return stepperStepPosition;
 }
 
+int RampsStepper::getLeftDistance() const {
+  return stepperStepTargetPosition - stepperStepPosition;
+}
+
 void RampsStepper::setPosition(int value) {
   stepperStepPosition = value;
   stepperStepTargetPosition = value;

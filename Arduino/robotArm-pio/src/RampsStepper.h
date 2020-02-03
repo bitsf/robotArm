@@ -9,6 +9,7 @@ public:
   
   bool isOnPosition() const;
   int getPosition() const;
+  int getLeftDistance() const;
   void setPosition(int value);
   void stepToPosition(int value);
   void stepRelative(int value);

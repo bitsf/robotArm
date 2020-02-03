@@ -34,9 +34,9 @@ void setup() {
 
   
   //reduction of steppers..
-  stepperHigher.setReductionRatio(32.0 / 9.0, 200 * 16);  //big gear: 32, small gear: 9, steps per rev: 200, microsteps: 16
-  stepperLower.setReductionRatio( 32.0 / 9.0, 200 * 16);
-  stepperRotate.setReductionRatio(32.0 / 9.0, 200 * 16);
+  stepperHigher.setReductionRatio(5.1, 200 * 8);  //big gear: 32, small gear: 9, steps per rev: 200, microsteps: 16
+  stepperLower.setReductionRatio( 5.1, 200 * 8);
+  stepperRotate.setReductionRatio(5.1, 200 * 1);
  
   //start positions..
   //stepperHigher.setPositionRad(PI / 2.0);  //90°
@@ -102,6 +102,44 @@ void testGCode(){
   }
 }
 
+void testMotor(){
+  // Serial.println("stepperLower.stepRelative");
+  // for(int i=1;i<20;i++){
+  //   do{
+  //     stepperLower.stepRelative(100);
+  //     stepperLower.update();
+  //     delay(100);
+  //     Serial.print(".");
+  //   }while(!stepperLower.isOnPosition());
+  //   Serial.println("");
+  // }
+
+  Serial.println("stepperHigher.stepRelative");
+  for(int i=1;i<20;i++){
+    do{
+      stepperHigher.stepRelative(10);
+      stepperHigher.update();
+      delay(100);
+      Serial.print(".");
+    }while(!stepperHigher.isOnPosition());
+    Serial.println("");
+  }
+
+  Serial.println("stepperRotate.stepRelative");
+  for(int i=1;i<20;i++){
+    do{
+      stepperRotate.stepRelative(10);
+      stepperRotate.update();
+      delay(100);
+      Serial.print(".");
+    }while(!stepperRotate.isOnPosition());
+    Serial.println("");
+  }
+
+  Serial.println("testMotor done");
+  delay(100);
+}
+
 void loop () {
   actionButton();
 
@@ -111,6 +149,25 @@ void loop () {
   stepperRotate.stepToPositionRad(geometry.getRotRad());
   stepperLower.stepToPositionRad (geometry.getLowRad());
   stepperHigher.stepToPositionRad(geometry.getHighRad());
+  // bool moved=false;
+  // if(stepperRotate.getLeftDistance()!=0){
+  //   Serial.print(" rot:");
+  //   Serial.print(stepperRotate.getLeftDistance());
+  //   moved=true;
+  // }
+  // if(stepperLower.getLeftDistance()!=0){
+  //   Serial.print(" low:");
+  //   Serial.print(stepperLower.getLeftDistance());
+  //   moved=true;
+  // }
+  // if(stepperHigher.getLeftDistance()!=0){
+  //   Serial.print(" high:");
+  //   Serial.print(stepperHigher.getLeftDistance());
+  //   moved=true;
+  // }
+  // if(moved){
+  //   Serial.println();
+  // }
   stepperRotate.update();
   stepperLower.update();
   stepperHigher.update(); 
@@ -298,6 +355,7 @@ void executeCommand(Cmd cmd) {
       case 18: cmdStepperOff(); break;
       case 105: Serial.println("Test echo "); break;
       case 106: testGCode(); break;
+      case 107: testMotor(); break;
       case 100: calibration(); break;
       //case 106: cmdFanOn(); break;
       //case 107: cmdFanOff(); break;
