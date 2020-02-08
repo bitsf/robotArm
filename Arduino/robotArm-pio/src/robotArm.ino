@@ -45,20 +45,21 @@ void setup() {
   //stepperExtruder.setPositionRad(0);
 
   //enable and init..
-  setStepperEnable(false);
+  // setStepperEnable(false);
 
   delay(50);
   
   // calibration();
   
-  //interpolator.setInterpolation(-18,4,140,0, -18,4,140,0);
-  interpolator.setInterpolation(-41,11,141,0, -41,11,141,0);
+  interpolator.setInterpolation(0,THICK_ARM_LEN,THICK_ARM_LEN,0, 0,THICK_ARM_LEN,THICK_ARM_LEN,0);
   interpolator.updateActualPosition();
   geometry.set(interpolator.getXPosmm(), interpolator.getYPosmm(), interpolator.getZPosmm());
   stepperRotate.setPositionRad(geometry.getRotRad());
   stepperLower.setPositionRad(geometry.getLowRad());
   stepperHigher.setPositionRad(geometry.getHighRad());
   
+  setStepperEnable(true);
+  // interpolator.setInterpolation(0,THICK_ARM_LEN,THICK_ARM_LEN / 2.0,0);
   Serial.println("start");
   
 }

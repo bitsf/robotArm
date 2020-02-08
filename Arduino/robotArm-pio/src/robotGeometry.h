@@ -1,6 +1,8 @@
 #ifndef ROBOTGEOMETRY_H_
 #define ROBOTGEOMETRY_H_
 
+#define THICK_ARM_LEN    178.0
+
 class RobotGeometry {
 public:
   RobotGeometry();

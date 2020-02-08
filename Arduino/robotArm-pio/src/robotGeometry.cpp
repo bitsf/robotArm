@@ -44,15 +44,10 @@ void RobotGeometry::calculateGrad() {
    
    rot = asin(xmm / rrot);
    //Angle of Higher Stepper Motor
-   high = acos((rside * 0.5) / 120.0) * 2.0;  //120mm shank length
+   high = asin((rside * 0.5) / THICK_ARM_LEN) * 2.0;  //120mm shank length
    
    //Angle of Lower Stepper Motor  (asin()=Angle To Gripper)
-   if (zmm > 0) {
-     low =      asin(rrot / rside) + ((PI - high) / 2.0) - (PI / 2.0);
-   } else {
-     low = PI - asin(rrot / rside) + ((PI - high) / 2.0) - (PI / 2.0);
-   }
-   
+   low = asin(zmm / rside) - high / 2.0;
    
    //correct higher Angle as it is mechanically bounded width lower Motor
    high = high + low;

@@ -3,7 +3,7 @@
 
 class RampsStepper {
 public:
-  RampsStepper(int aStepPin, int aDirPin, int aEnablePin);
+  RampsStepper(int aStepPin, int aDirPin, int aEnablePin, bool lowToEnable=true);
   void enable(bool value = true);
   void disable();
   
@@ -31,6 +31,7 @@ private:
   int enablePin;  
   
   float radToStepFactor;
+  bool lowToEnable;
 };
 
 #endif

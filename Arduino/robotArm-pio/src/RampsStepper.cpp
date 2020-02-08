@@ -4,13 +4,14 @@
 
 
 
-RampsStepper::RampsStepper(int aStepPin, int aDirPin, int aEnablePin) {
+RampsStepper::RampsStepper(int aStepPin, int aDirPin, int aEnablePin, bool aLowToEnable) {
   setReductionRatio(1, 3200);
   stepPin = aStepPin;
   dirPin = aDirPin;
   enablePin = aEnablePin;
+  lowToEnable = aLowToEnable;
   stepperStepPosition = 0;
-  stepperStepTargetPosition;
+  stepperStepTargetPosition = 0;
   pinMode(stepPin, OUTPUT);
   pinMode(dirPin, OUTPUT);
   pinMode(enablePin, OUTPUT);
@@ -18,11 +19,15 @@ RampsStepper::RampsStepper(int aStepPin, int aDirPin, int aEnablePin) {
 }
 
 void RampsStepper::enable(bool value) {
-  digitalWrite(enablePin, !value);
+  if(lowToEnable){
+    digitalWrite(enablePin, !value);
+  }else{
+    digitalWrite(enablePin, value);
+  }
 }
 
 void RampsStepper::disable() {
-  digitalWrite(enablePin, HIGH);
+  enable(false);
 }
 
 bool RampsStepper::isOnPosition() const {
