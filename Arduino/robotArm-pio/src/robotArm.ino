@@ -5,6 +5,7 @@
 #include "RampsStepper.h"
 #include "queue.h"
 #include "command.h"
+#include "limiter.h"
 
 #include <Stepper.h>
 
@@ -14,6 +15,7 @@ RampsStepper stepperLower(Y_STEP_PIN, Y_DIR_PIN, Y_ENABLE_PIN);
 RampsStepper stepperHigher(X_STEP_PIN, X_DIR_PIN, X_ENABLE_PIN);
 RobotGeometry geometry;
 Interpolation interpolator;
+Limiter limiter;
 Queue<Cmd> queue(15);
 Command command;
 bool absolute=true;
@@ -54,6 +56,9 @@ void setup() {
   interpolator.setInterpolation(0,THICK_ARM_LEN,THICK_ARM_LEN,0, 0,THICK_ARM_LEN,THICK_ARM_LEN,0);
   interpolator.updateActualPosition();
   geometry.set(interpolator.getXPosmm(), interpolator.getYPosmm(), interpolator.getZPosmm());
+  if(!limiter.isAvailable(geometry.getRotRad(), geometry.getLowRad(), geometry.getHighRad())){
+    Serial.println("bad init position");
+  }
   stepperRotate.setPositionRad(geometry.getRotRad());
   stepperLower.setPositionRad(geometry.getLowRad());
   stepperHigher.setPositionRad(geometry.getHighRad());
@@ -147,9 +152,19 @@ void loop () {
   //update and Calculate all Positions, Geometry and Drive all Motors...
   interpolator.updateActualPosition();
   geometry.set(interpolator.getXPosmm(), interpolator.getYPosmm(), interpolator.getZPosmm());
-  stepperRotate.stepToPositionRad(geometry.getRotRad());
-  stepperLower.stepToPositionRad (geometry.getLowRad());
-  stepperHigher.stepToPositionRad(geometry.getHighRad());
+  if(limiter.isAvailable(geometry.getRotRad(), geometry.getLowRad(), geometry.getHighRad())){
+    stepperRotate.stepToPositionRad(geometry.getRotRad());
+    stepperLower.stepToPositionRad (geometry.getLowRad());
+    stepperHigher.stepToPositionRad(geometry.getHighRad());
+  }else{
+    Serial.print("skipped motion:rot ");
+    Serial.print(geometry.getRotRad());
+    Serial.print(", low:");
+    Serial.print(geometry.getLowRad());
+    Serial.print(", high");
+    Serial.print(geometry.getHighRad());
+    Serial.println();
+  }
   // bool moved=false;
   // if(stepperRotate.getLeftDistance()!=0){
   //   Serial.print(" rot:");
