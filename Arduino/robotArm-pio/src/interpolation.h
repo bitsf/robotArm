@@ -34,7 +34,7 @@ public:
   
 private:
   float getDistance() const;
-  byte state;
+  byte state = 1;
   
   long startTime;  
   

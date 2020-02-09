@@ -7,6 +7,7 @@ class RobotGeometry {
 public:
   RobotGeometry();
   void set(float axmm, float aymm, float azmm);
+  void from(float arot, float alow, float ahigh);
   float getXmm() const;
   float getYmm() const;
   float getZmm() const;
@@ -15,6 +16,7 @@ public:
   float getHighRad() const;
 private:
   void calculateGrad();
+  void calculateAxis();
   float xmm;
   float ymm;
   float zmm;

@@ -15,12 +15,15 @@ RampsStepper stepperLower(Y_STEP_PIN, Y_DIR_PIN, Y_ENABLE_PIN);
 RampsStepper stepperHigher(X_STEP_PIN, X_DIR_PIN, X_ENABLE_PIN);
 RobotGeometry geometry;
 Interpolation interpolator;
+Interpolation interpolator_axis;
+Interpolation interpolator_rad;
 Limiter limiter;
 Queue<Cmd> queue(15);
 Command command;
 bool absolute=true;
 int button=0;
 int button_released=0;
+bool useAxis=true;
 
 void setup() {
   Serial.begin(115200);
@@ -53,8 +56,10 @@ void setup() {
   
   // calibration();
   
-  interpolator.setInterpolation(0,THICK_ARM_LEN,THICK_ARM_LEN,0, 0,THICK_ARM_LEN,THICK_ARM_LEN,0);
-  interpolator.updateActualPosition();
+  // interpolator.setInterpolation(0,THICK_ARM_LEN,THICK_ARM_LEN,0, 0,THICK_ARM_LEN,THICK_ARM_LEN,0);
+  // interpolator.updateActualPosition();
+  interpolator=interpolator_axis;
+  interpolator.setCurrentPos(0,THICK_ARM_LEN,THICK_ARM_LEN,0);
   geometry.set(interpolator.getXPosmm(), interpolator.getYPosmm(), interpolator.getZPosmm());
   if(!limiter.isAvailable(geometry.getRotRad(), geometry.getLowRad(), geometry.getHighRad())){
     Serial.println("bad init position");
@@ -149,6 +154,7 @@ void testMotor(){
 void loop () {
   actionButton();
 
+  if(useAxis){
   //update and Calculate all Positions, Geometry and Drive all Motors...
   interpolator.updateActualPosition();
   geometry.set(interpolator.getXPosmm(), interpolator.getYPosmm(), interpolator.getZPosmm());
@@ -161,9 +167,21 @@ void loop () {
     Serial.print(geometry.getRotRad());
     Serial.print(", low:");
     Serial.print(geometry.getLowRad());
-    Serial.print(", high");
+    Serial.print(", high:");
     Serial.print(geometry.getHighRad());
+    Serial.print(", x:");
+    Serial.print(interpolator.getXPosmm());
+    Serial.print(", y:");
+    Serial.print(interpolator.getYPosmm());
+    Serial.print(", z:");
+    Serial.print(interpolator.getZPosmm());
     Serial.println();
+    geometry.from(stepperRotate.getPositionRad(), stepperLower.getPositionRad(), stepperHigher.getPositionRad());
+    interpolator.setCurrentPos(geometry.getXmm(), geometry.getYmm(), geometry.getZmm(), 0);
+    if(!absolute){
+      queue.clear();
+    }
+    delay(1000);
   }
   // bool moved=false;
   // if(stepperRotate.getLeftDistance()!=0){
@@ -187,6 +205,22 @@ void loop () {
   stepperRotate.update();
   stepperLower.update();
   stepperHigher.update(); 
+  }else{
+    interpolator.updateActualPosition();
+    if(limiter.isAvailable(interpolator.getZPosmm(), interpolator.getYPosmm(), interpolator.getXPosmm())){
+      stepperRotate.stepToPositionRad(interpolator.getZPosmm());
+      stepperLower.stepToPositionRad (interpolator.getYPosmm());
+      stepperHigher.stepToPositionRad(interpolator.getXPosmm());
+    }else{
+      Serial.print("skipped motion:rot ");
+      Serial.print(interpolator.getZPosmm());
+      Serial.print(", low:");
+      Serial.print(interpolator.getYPosmm());
+      Serial.print(", high");
+      Serial.print(interpolator.getXPosmm());
+      Serial.println();
+    }
+  }
   
   if (!queue.isFull()) {
     if (command.handleGcode()) {
@@ -206,21 +240,13 @@ void loop () {
   }
 }
 
-
-
+void cmdHome(Cmd (&cmd)){
+  interpolator.setInterpolation(0,THICK_ARM_LEN,THICK_ARM_LEN,0);
+}
 
 void cmdMove(Cmd (&cmd)) {
-
    if(absolute){
-    Serial.print("echo move abs");
-    Serial.print(" X:");
-    Serial.print(cmd.valueX);
-    Serial.print(" Y:");
-    Serial.print(cmd.valueY);
-    Serial.print(" Z:");
-    Serial.print(cmd.valueZ);
-    Serial.print(" E:");
-    Serial.println(cmd.valueE);
+     Serial.print("echo move abs");
     interpolator.setInterpolation(cmd.valueX, cmd.valueY, cmd.valueZ, cmd.valueE, cmd.valueF);
    }else{
     Serial.print("echo move rel:");
@@ -234,6 +260,14 @@ void cmdMove(Cmd (&cmd)) {
     Serial.println(interpolator.getEPosmm()+cmd.valueE);
     interpolator.setInterpolation(interpolator.getXPosmm()+cmd.valueX,interpolator.getYPosmm()+cmd.valueY, interpolator.getZPosmm()+cmd.valueZ, interpolator.getEPosmm()+cmd.valueE, cmd.valueF);
    }
+    Serial.print(" X:");
+    Serial.print(interpolator.getXPosmm());
+    Serial.print(" Y:");
+    Serial.print(interpolator.getYPosmm());
+    Serial.print(" Z:");
+    Serial.print(interpolator.getZPosmm());
+    Serial.print(" E:");
+    Serial.println(interpolator.getEPosmm());
 }
 void cmdDwell(Cmd (&cmd)) {
   delay(int(cmd.valueT * 1000));
@@ -248,68 +282,38 @@ void cmdStepperOff() {
 
 void cmdGetPos() {
   Serial.print("X:");
-  Serial.print(geometry.getXmm());
+  Serial.print(interpolator.getXPosmm());
   Serial.print(" Y:");
   Serial.print(interpolator.getYPosmm());
   Serial.print(" Z:");
   Serial.print(interpolator.getZPosmm());
   Serial.print(" E:");
   Serial.print(interpolator.getEPosmm());
-  Serial.print(" ");
+  Serial.print(" rot:");
+  Serial.print(stepperRotate.getPositionRad());
+  Serial.print(" low:");
+  Serial.print(stepperLower.getPositionRad());
+  Serial.print(" high:");
   Serial.print(stepperHigher.getPositionRad());
+  Serial.println();
 }
 
 void cmdSetPosition(Cmd (&cmd)){
   interpolator.setCurrentPos(cmd.valueX,cmd.valueY,cmd.valueZ,cmd.valueE);
 }
 
-void cmdHome(Cmd (&cmd)){
-  //Home always all axis because we do not have the passed XYZ letters here
-  //Do homing by moving up the lower shank and disable the higher shank
-  Serial.println(stepperLower.getPosition());
-  stepperLower.setPosition(0);
-  stepperHigher.enable(false); //Spring
-  for(int i=0;i<250;i++){
-    stepperLower.stepToPosition(i*-1);  
-    //stepperHigher.stepToPosition(i*-1);  
-    stepperLower.update();
-    //stepperHigher.update();
-    delay(10); 
-    Serial.println(stepperLower.getPosition());
-    //Serial.println(stepperHigher.getPosition());
-  }
-  stepperHigher.enable(true);
-  interpolator.setCurrentPos(0,-20,125,0);
-  cmd.valueX=0;
-  cmd.valueY=120;
-  cmd.valueZ=160;
-  cmdMove(cmd);
+void cmdUseRad(){
+  useAxis=false;
+  interpolator=interpolator_rad;
+  interpolator.setCurrentPos(stepperHigher.getPositionRad(), stepperLower.getPositionRad(), stepperRotate.getPositionRad(),0);
 }
 
-
-void cmdOpen(Cmd (&cmd)){
-  //Home always all axis because we do not have the passed XYZ letters here
-  Serial.println(stepperLower.getPosition());
-  stepperLower.setPosition(0);
-  stepperHigher.setPosition(0);
-  stepperHigher.enable(false);
-  for(int i=0;i<200;i++){
-    stepperLower.stepToPosition(i*-1);  
-    stepperLower.update();
-
-    if(i==100){
-       Serial.println("echo High turbo");
-      stepperHigher.enable(true);
-    }
-    if(i>100){
-          stepperHigher.stepToPosition(i*0.05);  
-          stepperHigher.update();
-    }
-    delay(15); 
-  }
-  stepperHigher.enable(true);
+void cmdUseAxis(){
+  useAxis=true;
+  interpolator=interpolator_axis;
+  geometry.from(stepperRotate.getPositionRad(), stepperLower.getPositionRad(), stepperHigher.getPositionRad());
+  interpolator.setCurrentPos(geometry.getXmm(), geometry.getYmm(), geometry.getZmm(), 0);
 }
-
 
 void handleAsErr(Cmd (&cmd)) {
   printComment("Unknown Cmd " + String(cmd.id) + String(cmd.num) + " (queued)"); 
@@ -369,14 +373,15 @@ void executeCommand(Cmd cmd) {
       //case 5: cmdGripperOff(cmd); break;
       case 17: cmdStepperOn(); break;
       case 18: cmdStepperOff(); break;
+      case 20: cmdUseRad(); break;
+      case 21: cmdUseAxis(); break;
       case 105: Serial.println("Test echo "); break;
       case 106: testGCode(); break;
       case 107: testMotor(); break;
-      case 100: calibration(); break;
+      // case 100: calibration(); break;
       //case 106: cmdFanOn(); break;
       //case 107: cmdFanOff(); break;
       case 114: cmdGetPos();break;
-      case 40: cmdOpen(cmd);break;
       default: handleAsErr(cmd); 
     }
   } else {
